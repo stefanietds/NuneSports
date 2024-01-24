@@ -13,8 +13,7 @@ namespace NuneSports.Controller
         {
             _produto = produto;
         }
-
-
+        
         [HttpGet]
         public async Task<ActionResult<List<Produto>>> GetAllProdutos()
         {
