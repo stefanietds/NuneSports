@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using NuneSports.Model;
+using NuneSports.Service;
 
 namespace NuneSports.Controller
 {
@@ -7,46 +8,102 @@ namespace NuneSports.Controller
     [ApiController]
     public class ProdutoController : ControllerBase
     {
-        private readonly Repository.Produto _produto;
+        private readonly IProdutoService _produtoService;
 
-        public ProdutoController(Repository.Produto produto)
+        public ProdutoController(IProdutoService produtoService)
         {
-            _produto = produto;
+            _produtoService = produtoService;
         }
-        
+
         [HttpGet]
-        public async Task<ActionResult<List<Produto>>> GetAllProdutos()
+        public async Task<ActionResult<IEnumerable<Produto>>> GetAllProdutos()
         {
-            var produtos = await _produto.GetAllProduto();
-            return produtos.Any()? Ok(produtos) : NotFound("Nenhum produto localizado!");
+            try
+            {
+                var product = await _produtoService.GetProducts();
+                if (product is null)
+                    return NotFound("Product not found");
+
+                return Ok(product);
+            }
+            catch
+            {
+                return BadRequest("error");
+            }
         }
         
-        [HttpGet("{codigo}")]
-        public async Task<IResult> ProdutoId(int codigo)
+        [HttpGet("{id}", Name = "GetProduct")]
+        public async Task<ActionResult<Produto>> GetById(int id)
         {
-            var produto = await _produto.ProdutoId(codigo);
-            return produto is not null ? Results.Ok(produto) : Results.NotFound("O produto não foi encontrado") ;
-        }
+            try
+            {
+                var product = await _produtoService.GetProductById(id);
+                if (product is null)
+                    return NotFound("Product not found");
+
+                return Ok(product);
+            }
+            catch
+            {
+                return BadRequest();
+            }
+        } 
         
         [HttpPost]
-        public async Task<IResult> CreateProduto(Produto produto)
+        public async Task<ActionResult> Post([FromBody] Produto product)
         {
-            bool result = await _produto.CreateProduto(produto);
-            return result ? Results.Ok("Produto criado!") : Results.BadRequest("Não foi possivel criar o produto.");
+            try
+            {
+                if (product is null)
+                    return BadRequest("product is invalid");
+
+                await _produtoService.AddProduct(product);
+
+                return Ok(product);
+            }
+            catch
+            {
+                return BadRequest();
+            }
         }
         
-        [HttpPut("{codigo}/{nome}/{descricao}/{preco}")]
-        public async Task<IResult> UpdateProduto(int codigo, string nome, string descricao, decimal preco)
+        [HttpPut]
+        public async Task<ActionResult<Produto>> Put([FromBody] Produto product)
         {
-            bool result = await _produto.UpdateProduto(codigo, nome, descricao, preco);
-            return result ? Results.Ok("Produto atualizado!") : Results.NotFound("Não foi possivel atualizar o produto.");
+            try
+            {
+                if (product is null)
+                    return NotFound("Product not found");
+
+                await _produtoService.UpdateProduct(product);
+
+                return Ok(product);
+            }
+            catch
+            {
+                return BadRequest();
+            }
         }
-        
-        [HttpDelete("{codigo}")]
-        public async Task<IResult> DeleteProduto(int codigo)
+
+        [HttpDelete("{id}")]
+        public async Task<ActionResult<Produto>> Delete(int id)
         {
-            bool result = await _produto.Delete(codigo);
-            return result ? Results.Ok("Produto deletado com sucesso!") : Results.NotFound("Não foi possivel deletar o produto.");
+            try
+            {
+                var product = await _produtoService.GetProductById(id);
+
+                if (product is null)
+                    return NotFound("Product not found");
+                
+
+                await _produtoService.RemoveProduct(id);
+
+                return Ok(product);
+            }
+            catch
+            {
+                return BadRequest();
+            }
         }
         
     }
